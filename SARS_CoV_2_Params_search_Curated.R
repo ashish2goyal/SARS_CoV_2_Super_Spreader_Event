@@ -13,6 +13,62 @@ library(RColorBrewer)
 library(raster)
 
 
+
+################################
+# R0 histogram data
+################################
+R0_data<-vector()   ## https://cmmid.github.io/topics/covid19/overdispersion-from-outbreaksize.html
+R0_data[c(seq(1,720,by=1))]=0
+R0_data[c(seq(721,800,by=1))]=1
+R0_data[c(seq(801,835,by=1))]=2
+R0_data[c(seq(836,860,by=1))]=3
+R0_data[c(seq(861,880,by=1))]=4
+R0_data[c(seq(881,895,by=1))]=5
+R0_data[c(seq(896,905,by=1))]=6
+R0_data[c(seq(906,910,by=1))]=7
+R0_data[c(seq(911,913,by=1))]=8
+R0_data[c(seq(914,916,by=1))]=9
+R0_data[c(seq(917,919,by=1))]=10
+R0_data[c(seq(920,940,by=1))]=15
+R0_data[c(seq(941,1000,by=1))]=25
+
+
+################################
+# Serial Interval histogram data
+################################
+
+SI_data<-vector()  # PMID: 32191173
+SI_data[c(seq(1,1,by=1))]=-8
+SI_data[c(seq(2,2,by=1))]=-5
+SI_data[c(seq(3,5,by=1))]=-4
+SI_data[c(seq(6,6,by=1))]=-3
+SI_data[c(seq(7,7,by=1))]=-2
+SI_data[c(seq(8,8+7,by=1))]=0
+SI_data[c(seq(16,16+6,by=1))]=1
+SI_data[c(seq(23,23+9,by=1))]=2
+SI_data[c(seq(33,33+13,by=1))]=3
+SI_data[c(seq(47,47+7,by=1))]=4
+SI_data[c(seq(55,55+11,by=1))]=5
+SI_data[c(seq(67,67+7,by=1))]=6
+SI_data[c(seq(75,80,by=1))]=7
+SI_data[c(seq(81,87,by=1))]=8
+SI_data[c(seq(88,92,by=1))]=9
+SI_data[c(seq(93,96,by=1))]=10
+SI_data[c(seq(97,99,by=1))]=11
+SI_data[c(seq(100,102,by=1))]=12
+SI_data[c(seq(103,105,by=1))]=13
+SI_data[c(seq(106,106,by=1))]=14
+SI_data[c(seq(107,107,by=1))]=15
+SI_data[c(seq(108,108,by=1))]=16
+SI_data[c(seq(109,109,by=1))]=16
+
+################################
+# in vitro probability of positive virus culture data https://www.medrxiv.org/content/10.1101/2020.06.08.20125310v1
+################################
+
+VL_NTH<- c(seq(4,10,by=0.5))
+PROB_NTH<- c(0, 0, 0, 0, 0.02, 0.05, 0.1, 0.2, 0.32, 0.5, 0.67, 0.8, 0.88)
+
 ################################
 # Within host viral dynamics ODE model
 ################################
@@ -59,19 +115,19 @@ Parameters = read.csv("SimulatedParameters.txt",header=TRUE)
 ########################################################
 ########################################################
 
-#### choose parameter options for "rho"
+#### choose parameter options for "rho" -- or provide a vector
 dispersion_options<- c(10) 
 
-#### choose parameter options/value for "tau"
+#### choose parameter options/value for "tau" or provide a vector
 tzero_options=c(1)
 
-#### choose parameter options/value for "alpha"
+#### choose parameter options/value for "alpha" or provide a vector 
 alpha_options=c(2)
 
-#### choose parameter options/value for "lambda"
+#### choose parameter options/value for "lambda" or provide a vector
 AUC_factor_options<- c(4) ## lambda is 10^AUC_factor
 
-####choose parameter options/value for "theta"
+####choose parameter options/value for "theta" or provide a vector
 no_contact_options=c(4)
 
 
@@ -385,30 +441,63 @@ for (tzero_mean in tzero_options) {
 
         no_contact=no_contact_per_day
         
-        Mean_R0=mean(R0_infections,na.rm=TRUE)
+        R0=mean(R0_infections,na.rm=TRUE)
+        std_R0=std(R0_infections)
+        
+        ############ R0 histogram data to compare against
+        R0_standard <-c (0.72, 0.08, 0.035, 0.025, 0.020, 0.015, 0.010, 0.005, 0.004,0.003, 1-0.917 )  
+        ############
+        
+        
+        
+        ############ Simulated R0 histogram data
+        ct<-vector()
+        ct[1]= length(which(R0_infections==0))/max_simulation
+        ct[2]= length(which(R0_infections==1))/max_simulation
+        ct[3]= length(which(R0_infections==2))/max_simulation
+        ct[4]= length(which(R0_infections==3))/max_simulation
+        ct[5]= length(which(R0_infections==4))/max_simulation
+        ct[6]= length(which(R0_infections==5))/max_simulation
+        ct[7]= length(which(R0_infections==6))/max_simulation
+        ct[8]= length(which(R0_infections==7))/max_simulation
+        ct[9]= length(which(R0_infections==8))/max_simulation
+        ct[10]= length(which(R0_infections==9))/max_simulation
+        ct[11]= length(which(R0_infections>=10))/max_simulation
+        
+        
+        RSS_dispersion_R0=   sqrt(sum((ct - R0_standard)^2)) ### This error provides an estimated of how well our model does in reproducitn the R0 histogram
+        ############        
 
         
         SI_infections=na.omit(SI_infections)
         #print(SI_infections)
         if(length(SI_infections)==0){
-          Mean_SI=0
+          SI=0
           std_SI=0
         } else { 
-          Mean_SI=mean(SI_infections,na.rm=TRUE)
+          SI=mean(SI_infections,na.rm=TRUE)
           std_SI=std(SI_infections)
         }
         
         GT_infections=na.omit(GT_infections)
         #print(GT_infections)
         if(length(GT_infections)==0){
-          Mean_GT=0
+          GT=0
           std_GT=0
         } else { 
-          Mean_GT=mean(GT_infections,na.rm=TRUE)
+          GT=mean(GT_infections,na.rm=TRUE)
           std_GT=std(GT_infections)
         }
         
-        print(c(Mean_R0,Mean_SI,Mean_GT))
+        RSS_doseresponse=1 # ignore this please
+        
+        print(c(R0,SI,GT))
+
+        PAR_proj_R0_SI[par_ind,]=c(tzero_mean,alphat,betat,no_contact,dispersion_options[dispersion],R0,std_R0,SI,std_SI,GT,std_GT,mean(R0_asym_infections),RSS_dispersion_R0,RSS_doseresponse,max_simulation)
+        
+        
+        write.csv(PAR_proj_R0_SI,file="Output_File_search.csv",row.names = FALSE) 
+        
         
         ix=ix+1
         par_ind=par_ind+1
@@ -430,4 +519,26 @@ for (tzero_mean in tzero_options) {
 } # dispersion (rho) loop
                  
 
+
+
+
+################################### Criteria to find a suitable parameter combination 
+RN_min=1.4 
+RN_max=2.5
+SI_min=4
+SI_max=4.5
+
+Proj_COVID_R0=read.csv(file="Output_File_search.csv",as.is=TRUE)
+
+Proj_COVID_R0=data.frame(Proj_COVID_R0)
+
+Proj_COVID_R0$alpha=as.numeric(Proj_COVID_R0$alpha)
+
+Proj_COVID_R0$R0=as.numeric(Proj_COVID_R0$R0)
+
+Proj_COVID_R0$SI=as.numeric(Proj_COVID_R0$SI)
+
+Proj_COVID_R0_alpha=filter(Proj_COVID_R0,between(R0,RN_min,RN_max),between(SI,SI_min,SI_max),
+                           RSS_dispersion<0.05) 
+print(Proj_COVID_R0_alpha) ## these will be the combinations, and we select the one with the lowest RSS_dispersion
 
